@@ -22,7 +22,6 @@ const mockCards = [
 
 const BoardPage = () => {
   const { token } = useAuthStore();
-  const [boards, setBoards] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

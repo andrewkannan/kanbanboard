@@ -6,7 +6,9 @@ import {
   KeyboardSensor, 
   PointerSensor, 
   useSensor, 
-  useSensors, 
+  useSensors
+} from '@dnd-kit/core';
+import type {
   DragStartEvent,
   DragOverEvent,
   DragEndEvent
