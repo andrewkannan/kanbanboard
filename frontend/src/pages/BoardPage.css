@@ -1,0 +1,47 @@
+.board-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px;
+}
+
+.board-header {
+  margin-bottom: 20px;
+}
+
+.board-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.board-canvas {
+  flex: 1;
+  overflow: auto; /* Allow scrolling if content overflows */
+  display: flex;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-secondary);
+  gap: 15px;
+}
+
+.columns-container {
+  display: flex;
+  gap: 20px;
+  height: 100%;
+  padding-bottom: 10px;
+}
+
+/* Mobile specific styling: Vertical stacking */
+@media (max-width: 768px) {
+  .columns-container {
+    flex-direction: column;
+    height: auto;
+  }
+}
