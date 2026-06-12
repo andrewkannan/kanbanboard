@@ -31,6 +31,23 @@ export default function KanbanBoard({ initialColumns, initialCards }: BoardProps
   const [activeColumn, setActiveColumn] = useState<any | null>(null);
   const [activeCard, setActiveCard] = useState<any | null>(null);
 
+  const persistReorder = async (updatedCards: any[]) => {
+    try {
+      const items = updatedCards.map((c, index) => ({ id: c.id, columnId: c.columnId, order: index }));
+      const token = localStorage.getItem('token');
+      await fetch('http://localhost:5000/api/cards/reorder', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ items })
+      });
+    } catch (e) {
+      console.error('Failed to persist reorder', e);
+    }
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 3 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -68,13 +85,14 @@ export default function KanbanBoard({ initialColumns, initialCards }: BoardProps
         const activeIndex = cards.findIndex((t) => t.id === activeId);
         const overIndex = cards.findIndex((t) => t.id === overId);
         
+        let updatedCards = [...cards];
         if (cards[activeIndex].columnId !== cards[overIndex].columnId) {
-          const updatedCards = [...cards];
           updatedCards[activeIndex].columnId = cards[overIndex].columnId;
-          return arrayMove(updatedCards, activeIndex, overIndex);
         }
         
-        return arrayMove(cards, activeIndex, overIndex);
+        updatedCards = arrayMove(updatedCards, activeIndex, overIndex);
+        persistReorder(updatedCards);
+        return updatedCards;
       });
     }
 
@@ -82,9 +100,11 @@ export default function KanbanBoard({ initialColumns, initialCards }: BoardProps
     if (isActiveACard && isOverAColumn) {
       setCards((cards) => {
         const activeIndex = cards.findIndex((t) => t.id === activeId);
-        const updatedCards = [...cards];
+        let updatedCards = [...cards];
         updatedCards[activeIndex].columnId = overId as string;
-        return arrayMove(updatedCards, activeIndex, activeIndex);
+        updatedCards = arrayMove(updatedCards, activeIndex, activeIndex);
+        persistReorder(updatedCards);
+        return updatedCards;
       });
     }
   };
