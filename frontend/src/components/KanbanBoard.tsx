@@ -37,7 +37,7 @@ export default function KanbanBoard({ initialColumns, initialCards }: BoardProps
     try {
       const items = updatedCards.map((c, index) => ({ id: c.id, columnId: c.columnId, order: index }));
       const token = localStorage.getItem('token');
-      await fetch('http://localhost:5000/api/cards/reorder', {
+      await fetch('/api/cards/reorder', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
