@@ -3,32 +3,58 @@ import { useAuthStore } from '../store/useAuthStore';
 import KanbanBoard from '../components/KanbanBoard';
 import './BoardPage.css';
 
-// Mock data for the wow factor before DB connection
-const mockColumns = [
-  { id: 'todo', title: 'To-do', wipLimit: null },
-  { id: 'this-week', title: 'This week', wipLimit: null },
-  { id: 'in-progress', title: 'In progress', wipLimit: 3 },
-  { id: 'done', title: 'Done', wipLimit: null },
-];
-
-const mockCards = [
-  { id: 'c1', columnId: 'todo', title: 'Design marketing campaign', color: '#84cc16' },
-  { id: 'c2', columnId: 'todo', title: 'Experiment with AR/VR in app', color: '#06b6d4' },
-  { id: 'c3', columnId: 'this-week', title: 'Research market trends', hasComments: true, hasAttachments: true, color: '#84cc16' },
-  { id: 'c4', columnId: 'in-progress', title: 'Review data pipelines for AI model training', color: '#eab308' },
-  { id: 'c5', columnId: 'in-progress', title: 'Plan exhibition for upcoming trade show', hasChecklist: true, color: '#84cc16' },
-  { id: 'c6', columnId: 'done', title: 'Evaluate sales tools', color: '#d946ef' },
-];
-
 const BoardPage = () => {
   const { token } = useAuthStore();
+  const [boardId, setBoardId] = useState<string | null>(null);
+  const [columns, setColumns] = useState<any[]>([]);
+  const [cards, setCards] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, this fetches from the backend
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+    const fetchBoards = async () => {
+      try {
+        const res = await fetch('/api/boards', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const boards = await res.json();
+          if (boards.length > 0) {
+            const activeBoard = boards[0];
+            setBoardId(activeBoard.id);
+            
+            // Flatten columns and cards
+            const flatColumns: any[] = [];
+            const flatCards: any[] = [];
+            
+            activeBoard.columns.forEach((col: any) => {
+              flatColumns.push({ id: col.id, title: col.title, wipLimit: col.wipLimit });
+              col.cards.forEach((card: any) => {
+                flatCards.push({ 
+                  id: card.id, 
+                  columnId: col.id, 
+                  title: card.title, 
+                  description: card.description,
+                  color: card.color,
+                  dueDate: card.dueDate,
+                  checklists: card.checklists
+                });
+              });
+            });
+            
+            setColumns(flatColumns);
+            setCards(flatCards);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch boards", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (token) fetchBoards();
   }, [token]);
 
   if (isLoading) {
@@ -42,7 +68,17 @@ const BoardPage = () => {
       </header>
       
       <div className="board-canvas">
-        <KanbanBoard initialColumns={mockColumns} initialCards={mockCards} />
+        {boardId ? (
+          <KanbanBoard 
+            boardId={boardId} 
+            initialColumns={columns} 
+            initialCards={cards} 
+          />
+        ) : (
+          <div className="empty-state">
+            <p>No boards found.</p>
+          </div>
+        )}
       </div>
     </div>
   );

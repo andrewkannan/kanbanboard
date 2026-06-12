@@ -5,9 +5,10 @@ import './KanbanCard.css';
 
 interface CardProps {
   card: any;
+  onCardClick?: (card: any) => void;
 }
 
-export default function KanbanCard({ card }: CardProps) {
+export default function KanbanCard({ card, onCardClick }: CardProps) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
     id: card.id,
     data: { type: 'Card', card }
@@ -29,6 +30,7 @@ export default function KanbanCard({ card }: CardProps) {
       {...attributes} 
       {...listeners} 
       className="card-container"
+      onClick={() => onCardClick && onCardClick(card)}
     >
       {/* Optional Top Color Tag */}
       {card.color && <div className="card-color-strip" style={{ backgroundColor: card.color }}></div>}

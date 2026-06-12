@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import KanbanCard from './KanbanCard';
@@ -7,9 +8,13 @@ import './KanbanColumn.css';
 interface ColumnProps {
   column: any;
   cards: any[];
+  onAddCard: (columnId: string, title: string) => void;
+  onCardClick: (card: any) => void;
 }
 
-export default function KanbanColumn({ column, cards }: ColumnProps) {
+export default function KanbanColumn({ column, cards, onAddCard, onCardClick }: ColumnProps) {
+  const [isAddingCard, setIsAddingCard] = useState(false);
+  const [newCardTitle, setNewCardTitle] = useState('');
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
     id: column.id,
     data: { type: 'Column', column }
@@ -40,15 +45,41 @@ export default function KanbanColumn({ column, cards }: ColumnProps) {
           </span>
         </div>
         <div className="column-actions">
-          <button className="btn-icon"><Plus size={18} /></button>
+          <button className="btn-icon" onClick={() => setIsAddingCard(true)}><Plus size={18} /></button>
           <button className="btn-icon"><MoreHorizontal size={18} /></button>
         </div>
       </div>
 
       <div className="column-body">
+        {isAddingCard && (
+          <div className="add-card-inline">
+            <input 
+              autoFocus
+              type="text" 
+              className="input-field" 
+              placeholder="What needs to be done?"
+              value={newCardTitle}
+              onChange={e => setNewCardTitle(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && newCardTitle.trim() !== '') {
+                  onAddCard(column.id, newCardTitle.trim());
+                  setNewCardTitle('');
+                  setIsAddingCard(false);
+                } else if (e.key === 'Escape') {
+                  setIsAddingCard(false);
+                  setNewCardTitle('');
+                }
+              }}
+              onBlur={() => {
+                setIsAddingCard(false);
+                setNewCardTitle('');
+              }}
+            />
+          </div>
+        )}
         <SortableContext items={cards.map(c => c.id)} strategy={verticalListSortingStrategy}>
           {cards.map(card => (
-            <KanbanCard key={card.id} card={card} />
+            <KanbanCard key={card.id} card={card} onCardClick={onCardClick} />
           ))}
         </SortableContext>
       </div>

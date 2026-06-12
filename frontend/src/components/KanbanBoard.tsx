@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import CardModal from './CardModal';
 import { 
   DndContext, 
   DragOverlay, 
@@ -23,15 +24,62 @@ import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
 
 interface BoardProps {
+  boardId: string;
   initialColumns: any[];
   initialCards: any[];
 }
 
-export default function KanbanBoard({ initialColumns, initialCards }: BoardProps) {
+export default function KanbanBoard({ boardId, initialColumns, initialCards }: BoardProps) {
   const [columns, setColumns] = useState(initialColumns);
   const [cards, setCards] = useState(initialCards);
   const [activeColumn, setActiveColumn] = useState<any | null>(null);
   const [activeCard, setActiveCard] = useState<any | null>(null);
+  const [selectedCard, setSelectedCard] = useState<any | null>(null);
+
+  const handleAddColumn = async () => {
+    const title = prompt('Enter column title:');
+    if (!title) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/boards/${boardId}/columns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ title })
+      });
+      if (res.ok) {
+        const newCol = await res.json();
+        setColumns([...columns, newCol]);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleAddCard = async (columnId: string, title: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/columns/${columnId}/cards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ title })
+      });
+      if (res.ok) {
+        const newCard = await res.json();
+        setCards([...cards, newCard]);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleCardClick = (card: any) => {
+    setSelectedCard(card);
+  };
+
+  const handleCardUpdate = (updatedCard: any) => {
+    setCards(cards.map(c => c.id === updatedCard.id ? updatedCard : c));
+  };
+
+  const handleCardDelete = (deletedCardId: string) => {
+    setCards(cards.filter(c => c.id !== deletedCardId));
+    setSelectedCard(null);
+  };
 
   const persistReorder = async (updatedCards: any[]) => {
     try {
@@ -148,18 +196,39 @@ export default function KanbanBoard({ initialColumns, initialCards }: BoardProps
               key={col.id} 
               column={col} 
               cards={cards.filter(c => c.columnId === col.id)} 
+              onAddCard={handleAddCard}
+              onCardClick={handleCardClick}
             />
           ))}
         </SortableContext>
+        <div className="add-column-container">
+          <button className="btn-secondary add-column-btn" onClick={handleAddColumn}>
+            + Add another column
+          </button>
+        </div>
       </div>
 
       {/* Drag Overlay for smooth animations while holding an item */}
       <DragOverlay>
         {activeColumn && (
-          <KanbanColumn column={activeColumn} cards={cards.filter(c => c.columnId === activeColumn.id)} />
+          <KanbanColumn 
+            column={activeColumn} 
+            cards={cards.filter(c => c.columnId === activeColumn.id)} 
+            onAddCard={() => {}}
+            onCardClick={() => {}}
+          />
         )}
-        {activeCard && <KanbanCard card={activeCard} />}
+        {activeCard && <KanbanCard card={activeCard} onCardClick={() => {}} />}
       </DragOverlay>
+
+      {selectedCard && (
+        <CardModal 
+          card={selectedCard} 
+          onClose={() => setSelectedCard(null)} 
+          onUpdate={handleCardUpdate}
+          onDelete={handleCardDelete}
+        />
+      )}
     </DndContext>
   );
 }

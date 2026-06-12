@@ -47,6 +47,21 @@ app.post('/api/auth/register', async (req, res) => {
     const user = await prisma.user.create({
       data: { email, password: hashedPassword },
     });
+
+    // Create a default board for the new user
+    const board = await prisma.board.create({
+      data: {
+        title: 'My Workspace',
+        userId: user.id,
+        columns: {
+          create: [
+            { title: 'To-do', order: 0 },
+            { title: 'In progress', order: 1, wipLimit: 3 },
+            { title: 'Done', order: 2 }
+          ]
+        }
+      }
+    });
     
     const token = jwt.sign({ userId: user.id }, JWT_SECRET);
     res.json({ token, user: { id: user.id, email: user.email } });
@@ -116,6 +131,89 @@ app.put('/api/cards/reorder', authenticateToken, async (req: any, res: any) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to reorder cards' });
+  }
+});
+
+// Create Board
+app.post('/api/boards', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { title } = req.body;
+    const board = await prisma.board.create({
+      data: { title, userId: req.user.userId }
+    });
+    res.json(board);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create board' });
+  }
+});
+
+// Create Column
+app.post('/api/boards/:boardId/columns', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { boardId } = req.params;
+    const { title } = req.body;
+    
+    // Get highest order
+    const maxOrderCol = await prisma.column.findFirst({
+      where: { boardId },
+      orderBy: { order: 'desc' }
+    });
+    const order = maxOrderCol ? maxOrderCol.order + 1 : 0;
+
+    const column = await prisma.column.create({
+      data: { title, boardId, order }
+    });
+    res.json(column);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create column' });
+  }
+});
+
+// Create Card
+app.post('/api/columns/:columnId/cards', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { columnId } = req.params;
+    const { title } = req.body;
+
+    const maxOrderCard = await prisma.card.findFirst({
+      where: { columnId },
+      orderBy: { order: 'desc' }
+    });
+    const order = maxOrderCard ? maxOrderCard.order + 1 : 0;
+
+    const card = await prisma.card.create({
+      data: { title, columnId, order }
+    });
+    res.json(card);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create card' });
+  }
+});
+
+// Update Card
+app.put('/api/cards/:id', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const { title, description, color, dueDate } = req.body;
+    
+    const card = await prisma.card.update({
+      where: { id },
+      data: { title, description, color, dueDate }
+    });
+    res.json(card);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update card' });
+  }
+});
+
+// Delete Card
+app.delete('/api/cards/:id', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    await prisma.card.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete card' });
   }
 });
 
